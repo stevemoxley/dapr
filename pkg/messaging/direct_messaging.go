@@ -25,7 +25,6 @@ import (
 	diag "github.com/dapr/dapr/pkg/diagnostics"
 	diag_utils "github.com/dapr/dapr/pkg/diagnostics/utils"
 	"github.com/dapr/dapr/pkg/modes"
-	"github.com/dapr/dapr/pkg/retry"
 	"github.com/dapr/dapr/utils"
 
 	invokev1 "github.com/dapr/dapr/pkg/messaging/v1"
@@ -110,7 +109,9 @@ func (d *directMessaging) Invoke(ctx context.Context, targetAppID string, req *i
 	if app.id == d.appID && app.namespace == d.namespace {
 		return d.invokeLocal(ctx, req)
 	}
-	return d.invokeWithRetry(ctx, retry.DefaultLinearRetryCount, retry.DefaultLinearBackoffInterval, app, d.invokeRemote, req)
+
+	//Retry 3 times every second. Might make this retry logic more advanced. Need to do more testing
+	return d.invokeWithRetry(ctx, 3, time.Second, app, d.invokeRemote, req)
 }
 
 // requestAppIDAndNamespace takes an app id and returns the app id, namespace and error.
