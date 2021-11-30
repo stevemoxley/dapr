@@ -340,7 +340,8 @@ func (a *actorsRuntime) callRemoteActorWithRetry(
 		retryCount += 1
 		now := time.Now()
 		diff := now.Sub(startTime)
-		log.Warnf("failed to invoke target %s. retrying. time in queue:  %t", targetAddress, diff)
+		code := status.Code(err)
+		log.Warnf("failed to invoke target %s with error %e. retrying. time in queue:  %t", targetAddress, code, diff)
 
 		//Retry once per second for the first minute
 		//Otherwise retry one per minute forever
@@ -350,7 +351,6 @@ func (a *actorsRuntime) callRemoteActorWithRetry(
 			time.Sleep(time.Minute)
 		}
 
-		code := status.Code(err)
 		if code == codes.Unavailable || code == codes.Unauthenticated {
 			_, err = a.grpcConnectionFn(context.TODO(), targetAddress, targetID, a.config.Namespace, false, true, false)
 			if err != nil {
