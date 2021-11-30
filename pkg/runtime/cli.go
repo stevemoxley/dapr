@@ -93,7 +93,7 @@ func FromFlags() (*DaprRuntime, error) {
 		return nil, err
 	}
 
-	log.Infof("starting Dapr Runtime -- version %s -- commit %s", version.Version(), version.Commit())
+	log.Infof("starting Dapr Runtime (Steve's Fork) -- version %s -- commit %s", version.Version(), version.Commit())
 	log.Infof("log level set to: %s", loggerOptions.OutputLevel)
 
 	// Initialize dapr metrics exporter

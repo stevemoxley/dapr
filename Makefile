@@ -44,7 +44,9 @@ else ifeq ($(shell echo $(LOCAL_ARCH) | head -c 5),arm64)
 else
 	TARGET_ARCH_LOCAL=amd64
 endif
-export GOARCH ?= $(TARGET_ARCH_LOCAL)
+#Uncomment below for the default
+#export GOARCH ?= $(TARGET_ARCH_LOCAL)
+export GOARCH ?= amd64
 
 ifeq ($(GOARCH),amd64)
 	LATEST_TAG=latest
@@ -61,7 +63,9 @@ else
    TARGET_OS_LOCAL ?= windows
    PROTOC_GEN_GO_NAME := "protoc-gen-go.exe"
 endif
-export GOOS ?= $(TARGET_OS_LOCAL)
+#Uncomment below for the default
+#export GOOS ?= $(TARGET_OS_LOCAL)
+export GOOS ?= windows
 
 PROTOC_GEN_GO_NAME+= "v1.26.0"
 

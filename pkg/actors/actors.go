@@ -43,7 +43,6 @@ import (
 	"github.com/dapr/dapr/pkg/modes"
 	commonv1pb "github.com/dapr/dapr/pkg/proto/common/v1"
 	internalv1pb "github.com/dapr/dapr/pkg/proto/internals/v1"
-	"github.com/dapr/dapr/pkg/retry"
 )
 
 const (
@@ -309,7 +308,7 @@ func (a *actorsRuntime) Call(ctx context.Context, req *invokev1.InvokeMethodRequ
 	if a.isActorLocal(targetActorAddress, a.config.HostAddress, a.config.Port) {
 		resp, err = a.callLocalActor(ctx, req)
 	} else {
-		resp, err = a.callRemoteActorWithRetry(ctx, retry.DefaultLinearRetryCount, retry.DefaultLinearBackoffInterval, a.callRemoteActor, targetActorAddress, appID, req)
+		resp, err = a.callRemoteActorWithRetry(ctx, a.callRemoteActor, targetActorAddress, appID, req)
 	}
 
 	if err != nil {
@@ -321,16 +320,35 @@ func (a *actorsRuntime) Call(ctx context.Context, req *invokev1.InvokeMethodRequ
 // callRemoteActorWithRetry will call a remote actor for the specified number of retries and will only retry in the case of transient failures.
 func (a *actorsRuntime) callRemoteActorWithRetry(
 	ctx context.Context,
-	numRetries int,
-	backoffInterval time.Duration,
 	fn func(ctx context.Context, targetAddress, targetID string, req *invokev1.InvokeMethodRequest) (*invokev1.InvokeMethodResponse, error),
 	targetAddress, targetID string, req *invokev1.InvokeMethodRequest) (*invokev1.InvokeMethodResponse, error) {
-	for i := 0; i < numRetries; i++ {
+
+	//I want to customize this retry logic
+	//Infinite loop? Probably not the best way to do it lel.
+	retryCount := 0
+	startTime := time.Now()
+	for {
+
 		resp, err := fn(ctx, targetAddress, targetID, req)
 		if err == nil {
+			//Success, return the response
 			return resp, nil
 		}
-		time.Sleep(backoffInterval)
+
+		//If there was an error sleep for a specified time then run through the loop again
+		//Your special sleep function goes hurr
+		retryCount += 1
+		now := time.Now()
+		diff := now.Sub(startTime)
+		log.Warnf("failed to invoke target %s. retrying. time in queue:  %t", targetAddress, diff)
+
+		//Retry once per second for the first minute
+		//Otherwise retry one per minute forever
+		if retryCount < 60 {
+			time.Sleep(time.Second)
+		} else {
+			time.Sleep(time.Minute)
+		}
 
 		code := status.Code(err)
 		if code == codes.Unavailable || code == codes.Unauthenticated {
@@ -340,9 +358,12 @@ func (a *actorsRuntime) callRemoteActorWithRetry(
 			}
 			continue
 		}
+
 		return resp, err
 	}
-	return nil, errors.Errorf("failed to invoke target %s after %v retries", targetAddress, numRetries)
+
+	//This is the old return statement
+	//return nil, errors.Errorf("failed to invoke target %s after %v retries", targetAddress, retryCount)
 }
 
 func (a *actorsRuntime) getOrCreateActor(actorType, actorID string) *actor {
